@@ -1,0 +1,29 @@
+// lnsalerts2.proto
+syntax = "proto3";
+import "google/protobuf/any.proto";
+
+// Single alert definition
+message Alert {
+    int32 ownerid = 1;
+    int32 code = 2;
+    int32 subcode = 3;
+    string message = 4;
+    google.protobuf.Any details = 5;
+}
+
+// Array of alerts
+message Alerts {
+    repeated Alert all = 1;
+  }
+  
+// Alert details
+message CertificateExpiredDetails {
+    string pubkey = 5;
+    float expirationtime = 6;
+}
+
+message CertificateAlmostExpiredDetails {
+    string pubkey = 5;
+    float expirationtime = 6;
+}
+

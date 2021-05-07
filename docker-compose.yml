@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  poised_pigeon_prod:
+    container_name: poised_pigeon_prod
+    image: rabbitmq:3.8.16-management
+    hostname: poised-pigeon
+    volumes:
+      - ./rabbitmq/etc/definitions.json:/etc/rabbitmq/definitions.json
+      - ./rabbitmq/etc/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/data/prod:/var/lib/rabbitmq/mnesia/rabbit@my-rabbit
+      - ./rabbitmq/logs/prod:/var/log/rabbitmq/log
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  poised_pigeon_test:
+    container_name: poised_pigeon_test
+    image: rabbitmq:3.8.16-management
+    hostname: poised-pigeon
+    volumes:
+      - ./rabbitmq/etc/definitions-test.json:/etc/rabbitmq/definitions.json
+      - ./rabbitmq/etc/rabbitmq-test.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/data/test:/var/lib/rabbitmq/mnesia/rabbit@my-rabbit
+      - ./rabbitmq/logs/test:/var/log/rabbitmq/log
+    ports:
+      - 5672:5672
+      - 15672:15672
+    
+  test_lns:
+    container_name: test_lns
+    # command: python lns-messaging-broker/tests/lns/lns.py
+    command: tail -f requirements.txt
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    volumes: 
+      - .:/lns-messaging-broker
+    network_mode: "host"
+
+  test_client:
+    container_name: test_client
+    # command: python lns-messaging-broker/tests/client/client.py
+    command: tail -f requirements.txt
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    volumes: 
+      - .:/lns-messaging-broker
+    network_mode: "host"
+  
+  test_orchestrator:
+    container_name: test_orchestrator
+    # command: pytest tests/
+    command: tail -f requirements.txt
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    depends_on: 
+      # - poised_pigeon_test
+      - test_lns
+      - test_client
+    volumes: 
+      - .:/lns-messaging-broker
+    network_mode: "host"
+  
+  make_messages:
+    command: make messages
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/make_messages.Dockerfile
+    volumes: 
+      - .:/messages
+    network_mode: "host"
