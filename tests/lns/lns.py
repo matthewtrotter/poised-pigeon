@@ -1,51 +1,76 @@
 import asyncio
 from aio_pika import connect, Message, IncomingMessage
 import zmq
+import zmq.asyncio
 import logging
+import os
+import sys
+import xmlrpc.server
 
 import rpc
 
-class AlertServer:
-    """Publish alerts to the message broker on command from the test orchestrator.
+class MessagingServer:
+    """Publish alerts to the message broker on command from the test orchestrator and respond to RPCs.
     """
     def __init__(self, username: str = 'testlns', password: str = 'testlns',
-                       ip: str = 'localhost', ownerid: int = 0):
+                       ip: str = 'localhost'):
+        test_orchestration_port = os.getenv('TEST_ORCHESTRATION_PORT', None)
         self.username = username
         self.password = password
         self.ip = ip
-        self.ownerid = ownerid
+        self.ownerid = test_orchestration_port
+        self.alerts_queue = f'lns.alerts.{self.ownerid}'
+        print(self.alerts_queue)
 
         # Test orchestration connection
-        print('starting zmq')
-        context = zmq.Context()
+        context = zmq.asyncio.Context()
         self.test_socket = context.socket(zmq.SUB)
-        self.test_socket.connect(f'tcp://127.0.0.1:5001')
+        self.test_socket.connect(f'tcp://127.0.0.1:{test_orchestration_port}')
         self.test_socket.subscribe('')
-        print('subscribed zmq')
 
-    async def _setup_broker_conn(self):
-        print('starting broker connection')
-
+    async def setup_broker_conn(self):
         self.conn = await connect(f"amqp://{self.username}:{self.password}@localhost/")
         self.chan = await self.conn.channel()
-        self.queue = f'lns.alerts.{self.ownerid}'
-        await self.chan.declare_queue(self.queue)
-        print('got broker connection')
 
-    async def run(self):
-        """Publish alerts to the message broker on command from the test orchestrator.
+    async def _publish_message(self, queue: str, message: bytes):
+        """Publish a message to the broker
+
+        Parameters
+        ----------
+        message : bytes
+            bytes object to publish
         """
-        await self._setup_broker_conn()
-        
+        await self.chan.declare_queue(queue)
+        await self.chan.default_exchange.publish(
+            Message(message),
+            routing_key=queue,
+        )
+        print(f'Published: {message}')
+
+    async def listen_test(self):
+        """Publish alerts to the message broker on command from the test orchestrator.
+        """        
         while True:
             print('Waiting for alert from test orchestrator...')
-            alert_bin = self.test_socket.recv()     # Receive from test orchestrator
-            print(alert_bin)
-            print(type(alert_bin))
-            await self.chan.default_exchange.publish(
-                Message(alert_bin),
-                routing_key=self.queue,
-            )
+            alert_bin = await self.test_socket.recv()     # Receive from test orchestrator
+            await self._publish_message(self.alerts_queue, alert_bin)
+    
+    async def serve_rpc(self):
+        """Listen for RPC requests, process, and respond with the procedure's result
+        """
+        while True:
+            queue = await self.chan.declare_queue(f'lns.rpc.{self.ownerid}')
+            print('Waiting for RPC request...')
+            async with queue.iterator() as queue_iter:
+                async for message in queue_iter:
+                    async with message.process():
+                        rpc_response, queue = await self._process_rpc_request(message.body)
+                        await self._publish_message(queue, rpc_response)
+
+    async def _process_rpc_request(self, rpc_request: bytes):
+        rpc_response = b'asdf'
+        queue = 'asdf'
+        return rpc_response, queue
     
 class RpcServer:
     async def __init__(self, username: str = 'testlns', password: str = 'testlns', ip: str = 'localhost', ownerid: int = 0):
@@ -92,15 +117,14 @@ class RpcServer:
 
 
 async def main():
-    alerts = AlertServer()
-    # rpcs = RpcServer()
-    print('hi')
+    mess = MessagingServer()
 
+    await mess.setup_broker_conn()
     await asyncio.gather(
-        alerts.run(),
-        # rpcs.run()
+        mess.listen_test(),
+        mess.serve_rpc()
     )
 
 if __name__ == "__main__":
-    print('hi')
     asyncio.run(main())
+

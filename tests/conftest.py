@@ -4,31 +4,39 @@ import time
 import zmq
 
 @pytest.fixture
-async def lns_conn(port: int = 5001):
-    # Create socket connection to LNS
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.bind(f'tcp://127.0.0.1:{port}')
+async def lns_conns():
+    # Create socket connections to LNSs
+    lns_ports = [5001, 5002, 5003]
+    sockets = [None,]*len(lns_ports)
+    for i, port in enumerate(lns_ports):
+        context = zmq.Context()
+        sockets[i] = context.socket(zmq.PUB)
+        sockets[i].bind(f'tcp://127.0.0.1:{port}')
     await asyncio.sleep(1)
 
     # Yield the socket to the test function
-    yield socket
+    yield sockets
 
     # Clean up after test is complete
-    socket.close()
+    for socket in sockets:
+        socket.close()
 
 
 @pytest.fixture
-async def client_conn(port: int = 5002):
-    # Create socket connection to Client
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect(f'tcp://127.0.0.1:{port}')
-    socket.subscribe('')
+async def client_conns():
+    # Create socket connections to Clients
+    client_ports = [5011, 5012, 5013]
+    sockets = [None,]*len(client_ports)
+    for i, port in enumerate(client_ports):
+        context = zmq.Context()
+        sockets[i] = context.socket(zmq.SUB)
+        sockets[i].connect(f'tcp://127.0.0.1:{port}')
+        sockets[i].subscribe('')
     await asyncio.sleep(1)
 
     # Yield the socket to the test function
-    yield socket
+    yield sockets
 
     # Clean up after test is complete
-    socket.close()
+    for socket in sockets:
+        socket.close()

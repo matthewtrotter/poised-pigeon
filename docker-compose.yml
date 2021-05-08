@@ -27,28 +27,79 @@ services:
       - 5672:5672
       - 15672:15672
     
-  test_lns:
-    container_name: test_lns
-    # command: python lns-messaging-broker/tests/lns/lns.py
+  test_lns1:
+    container_name: test_lns1
+    command: python lns-messaging-broker/tests/lns/lns.py
     command: tail -f requirements.txt
     build: 
       context: .
       dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    environment: 
+      - TEST_ORCHESTRATION_PORT=5001
     volumes: 
       - .:/lns-messaging-broker
     network_mode: "host"
 
-  test_client:
-    container_name: test_client
-    # command: python lns-messaging-broker/tests/client/client.py
-    command: tail -f requirements.txt
+  test_lns2:
+    container_name: test_lns2
+    command: python lns-messaging-broker/tests/lns/lns.py
     build: 
       context: .
       dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    environment: 
+      - TEST_ORCHESTRATION_PORT=5002
+    volumes: 
+      - .:/lns-messaging-broker
+    network_mode: "host"
+
+  test_lns3:
+    container_name: test_lns3
+    command: python lns-messaging-broker/tests/lns/lns.py
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    environment: 
+      - TEST_ORCHESTRATION_PORT=5003
+    volumes: 
+      - .:/lns-messaging-broker
+    network_mode: "host"
+    
+  test_client1:
+    container_name: test_client1
+    command: python lns-messaging-broker/tests/client/client.py
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    environment: 
+      - TEST_ORCHESTRATION_PORT=5011
     volumes: 
       - .:/lns-messaging-broker
     network_mode: "host"
   
+  test_client2:
+    container_name: test_client2
+    command: python lns-messaging-broker/tests/client/client.py
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    environment: 
+      - TEST_ORCHESTRATION_PORT=5012
+    volumes: 
+      - .:/lns-messaging-broker
+    network_mode: "host"
+
+  test_client3:
+    container_name: test_client3
+    command: python lns-messaging-broker/tests/client/client.py
+    build: 
+      context: .
+      dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
+    environment: 
+      - TEST_ORCHESTRATION_PORT=5013
+    volumes: 
+      - .:/lns-messaging-broker
+    network_mode: "host"
+
   test_orchestrator:
     container_name: test_orchestrator
     # command: pytest tests/
@@ -57,9 +108,12 @@ services:
       context: .
       dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
     depends_on: 
-      # - poised_pigeon_test
-      - test_lns
-      - test_client
+      - test_lns1
+      # - test_lns2
+      # - test_lns3
+      # - test_client1
+      # - test_client2
+      # - test_client3
     volumes: 
       - .:/lns-messaging-broker
     network_mode: "host"

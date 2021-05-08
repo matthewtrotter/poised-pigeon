@@ -19,6 +19,15 @@ class AlertClient:
         self.test_socket.bind("tcp://127.0.0.1:5002")
         time.sleep(1)
 
+    async def listen_test(self):
+        """Send RPC requests to the message broker on command from the test orchestrator.
+        """        
+        while True:
+            print('Waiting for command from test orchestrator...')
+            rpc_request_bin = await self.test_socket.recv()     # Receive from test orchestrator
+            rpc_response = await self._send_rpc_request(self.rpc_queue, rpc_request_bin)
+            
+
     async def run(self):
         """Publish alerts to the message broker on command from the test orchestrator.
         """
