@@ -28,7 +28,7 @@ class MessagingServer:
         self.test_socket.connect(f'tcp://127.0.0.1:{test_orchestration_port}')
         self.test_socket.subscribe('')
 
-    async def setup_broker_conn(self):
+    async def connect(self):
         self.conn = await connect(f"amqp://{self.username}:{self.password}@localhost/")
         self.chan = await self.conn.channel()
 

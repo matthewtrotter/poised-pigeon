@@ -2,6 +2,12 @@ import asyncio
 import pytest
 import time
 import zmq
+from tests.fixtures import SimulationFactory
+
+@pytest.fixture
+def factory():
+    return SimulationFactory()
+    
 
 @pytest.fixture
 async def lns_conns():

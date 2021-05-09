@@ -107,8 +107,8 @@ services:
     build: 
       context: .
       dockerfile: ./recipes/docker/test_orchestrator.Dockerfile
-    depends_on: 
-      - test_lns1
+    # depends_on: 
+    #   - test_lns1
       # - test_lns2
       # - test_lns3
       # - test_client1
